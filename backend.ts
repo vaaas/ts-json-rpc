@@ -98,22 +98,21 @@ export type RPCResponse<
  */
 function toRPCResponse<
     P extends Procedures,
-    I extends ID,
     M extends Method<P>
 >(
-    request: RPCRequest<P, I, M>,
+    id: ID,
     response: Result<P, M>,
-): RPCResponse<P, I, M> {
+): RPCResponse<P, ID, M> {
     if (response instanceof HTTPError) {
         return {
             jsonrpc: '2.0',
-            id: request.id,
+            id,
             error: response as BadResult<P, M>,
         };
     }
     return {
         jsonrpc: '2.0',
-        id: request.id,
+        id,
         result: response as GoodResult<P, M>,
     };
 }
@@ -139,12 +138,13 @@ function serve<P extends Procedures, I extends ID, M extends Method<P>>(
 
 function call_method<P extends Procedures, I extends ID, M extends Method<P>>(
     procedures: P,
-    request: RPCRequest<P, I, M>,
     env: Env<P>,
+    method: M,
+    params: Params<P, M>,
 ): Promise<Result<P, M>> {
-    return procedures[request.method]!.procedure(
+    return procedures[method]!.procedure(
         env,
-        ...request.params,
+        ...params,
     ).catch(e => {
         console.log(e);
         return new HTTPError(500, 'Internal server error');
@@ -154,7 +154,7 @@ function call_method<P extends Procedures, I extends ID, M extends Method<P>>(
 export default function initialise<P extends Procedures>(
     procedures: P,
     env_provider: (req: IncomingMessage, res: ServerResponse) => Env<P>,
-    body_provider: (req: IncomingMessage) => any,
+    body_provider: (req: IncomingMessage) => number | Promise<number>,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
     const request_validator = validate<ArrayOrItem<RPCRequest<P, ID, Method<P>>>>(Union(
         validate_one,
@@ -173,36 +173,30 @@ export default function initialise<P extends Procedures>(
         );
     }
 
-    return async function(req: IncomingMessage, res: ServerResponse) {
-        if (req.method !== 'POST') {
-            res.writeHead(405, { 'Content-Type': 'text/plain' });
-            res.end('Method not allowed');
+    return async function(http_request: IncomingMessage, socket: ServerResponse): Promise<void> {
+        if (http_request.method !== 'POST') {
+            socket.writeHead(405, { 'Content-Type': 'text/plain' });
+            socket.end('Method not allowed');
             return;
         }
-        const request = request_validator(body_provider(req));
-        if (request instanceof Error) {
-            res.writeHead(400, { 'Content-Type': 'text/plain' });
-            res.end('Bad request');
+        let body = body_provider(http_request);
+        if (body instanceof Promise)
+            body = await body;
+        const req = request_validator(body);
+        if (req instanceof Error) {
+            socket.writeHead(400, { 'Content-Type': 'text/plain' });
+            socket.end('Bad request');
             return;
         }
-        const env = env_provider(req, res);
-
-        let result: ArrayOrItem<RPCResponse<P, ID, Method<P>>>;
-        if (Array.isArray(request)) {
-            result = await (
-                Promise.all(
-                    request.map(x =>
-                        call_method(procedures, x, env)
-                            .then(y => [x, y] as const))
-                ).then(xs => xs.map(([request, result]) => toRPCResponse(request, result)))
-            );
-        } else {
-            result = toRPCResponse(
-                request,
-                await call_method(procedures, request, env),
-            );
-        }
-
-        serve(res, result);
+        const env = env_provider(http_request, socket);
+        const res: ArrayOrItem<RPCResponse<P, ID, Method<P>>> =
+            Array.isArray(req)
+                ? await Promise.all(req.map(
+                    req => call_method(procedures, env, req.method, req.params)
+                        .then(res => toRPCResponse(req.id, res))))
+                : toRPCResponse(
+                    req.id,
+                    await call_method(procedures, env, req.method, req.params));
+        serve(socket, res);
     }
 }

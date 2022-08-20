@@ -7,17 +7,17 @@ const HTTPError_1 = require("./HTTPError");
  * Generates a json-rpc response from a procedure response.
  * Note that errors have a different schema!
  */
-function toRPCResponse(request, response) {
+function toRPCResponse(id, response) {
     if (response instanceof HTTPError_1.default) {
         return {
             jsonrpc: '2.0',
-            id: request.id,
+            id,
             error: response,
         };
     }
     return {
         jsonrpc: '2.0',
-        id: request.id,
+        id,
         result: response,
     };
 }
@@ -38,8 +38,8 @@ function serve(socket, response) {
         socket.end(response);
     }
 }
-function call_method(procedures, request, env) {
-    return procedures[request.method].procedure(env, ...request.params).catch(e => {
+function call_method(procedures, env, method, params) {
+    return procedures[method].procedure(env, ...params).catch(e => {
         console.log(e);
         return new HTTPError_1.default(500, 'Internal server error');
     });
@@ -55,28 +55,27 @@ function initialise(procedures, env_provider, body_provider) {
             && Array.isArray(x.params)
             && procedures[x.method].validator(x.params));
     }
-    return async function (req, res) {
-        if (req.method !== 'POST') {
-            res.writeHead(405, { 'Content-Type': 'text/plain' });
-            res.end('Method not allowed');
+    return async function (http_request, socket) {
+        if (http_request.method !== 'POST') {
+            socket.writeHead(405, { 'Content-Type': 'text/plain' });
+            socket.end('Method not allowed');
             return;
         }
-        const request = request_validator(body_provider(req));
-        if (request instanceof Error) {
-            res.writeHead(400, { 'Content-Type': 'text/plain' });
-            res.end('Bad request');
+        let body = body_provider(http_request);
+        if (body instanceof Promise)
+            body = await body;
+        const req = request_validator(body);
+        if (req instanceof Error) {
+            socket.writeHead(400, { 'Content-Type': 'text/plain' });
+            socket.end('Bad request');
             return;
         }
-        const env = env_provider(req, res);
-        let result;
-        if (Array.isArray(request)) {
-            result = await (Promise.all(request.map(x => call_method(procedures, x, env)
-                .then(y => [x, y]))).then(xs => xs.map(([request, result]) => toRPCResponse(request, result))));
-        }
-        else {
-            result = toRPCResponse(request, await call_method(procedures, request, env));
-        }
-        serve(res, result);
+        const env = env_provider(http_request, socket);
+        const res = Array.isArray(req)
+            ? await Promise.all(req.map(req => call_method(procedures, env, req.method, req.params)
+                .then(res => toRPCResponse(req.id, res))))
+            : toRPCResponse(req.id, await call_method(procedures, env, req.method, req.params));
+        serve(socket, res);
     };
 }
 exports.default = initialise;
