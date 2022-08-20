@@ -8,7 +8,7 @@ import type {
     ID,
 } from './backend';
 import HTTPError from './HTTPError';
-import { Unary, ArrayOrItem, Nullary } from 'fpts/data';
+import type { Unary, ArrayOrItem, Nullary } from 'fpts/data';
 import { pop } from 'fpts/map';
 
 type RequestRes<

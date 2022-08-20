@@ -5,6 +5,7 @@ import { Natural, Union, List, validate } from 'ts-validate';
 import { Tail, Intersect, ArrayOrItem } from 'fpts/data';
 import HTTPError from './HTTPError';
 
+
 /** a procedure object */
 export type Procedure = {
     procedure: (env: any, ...xs: any[]) => Promise<any | HTTPError<any>>;
@@ -92,6 +93,17 @@ export type RPCResponse<
 > = RPCSuccess<P, I, M>
     | RPCFailure<P, I, M>
 
+
+function text(socket: ServerResponse, code: number, data: string): void {
+    socket.writeHead(code, { 'Content-Type': 'text/plain' });
+    socket.end(data);
+}
+
+function json(socket: ServerResponse, data: any, code: number = 200): void {
+    socket.writeHead(code, { 'Content-Type': 'application/json' });
+    socket.end(JSON.stringify(data));
+}
+
 /**
  * Generates a json-rpc response from a procedure response.
  * Note that errors have a different schema!
@@ -122,18 +134,12 @@ function serve<P extends Procedures, I extends ID, M extends Method<P>>(
     socket: ServerResponse,
     response: ArrayOrItem<RPCResponse<P, I, M>>,
 ): void {
-    const headers = { 'Content-Type': 'application/json' };
-    const data = JSON.stringify(response);
-    if (Array.isArray(response)) {
-        socket.writeHead(200, headers);
-        socket.end(data);
-    } else if ('error' in response) {
-        socket.writeHead((response.error as HTTPError<any>).code, headers)
-        socket.end(response);
-    } else {
-        socket.writeHead(200, headers);
-        socket.end(response);
-    }
+    if (Array.isArray(response))
+        json(socket, response);
+    else if ('error' in response)
+        json(socket, response, (response.error as HTTPError<any>).code);
+    else
+        json(socket, response);
 }
 
 function call_method<P extends Procedures, I extends ID, M extends Method<P>>(
@@ -174,20 +180,14 @@ export default function initialise<P extends Procedures>(
     }
 
     return async function(http_request: IncomingMessage, socket: ServerResponse): Promise<void> {
-        if (http_request.method !== 'POST') {
-            socket.writeHead(405, { 'Content-Type': 'text/plain' });
-            socket.end('Method not allowed');
-            return;
-        }
+        if (http_request.method !== 'POST')
+            return text(socket, 405, 'Method not allowed');
         let body = body_provider(http_request);
         if (body instanceof Promise)
             body = await body;
         const req = request_validator(body);
-        if (req instanceof Error) {
-            socket.writeHead(400, { 'Content-Type': 'text/plain' });
-            socket.end('Bad request');
-            return;
-        }
+        if (req instanceof Error)
+            return text(socket, 400, 'Bad request');
         const env = env_provider(http_request, socket);
         const res: ArrayOrItem<RPCResponse<P, ID, Method<P>>> =
             Array.isArray(req)
