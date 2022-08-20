@@ -2,9 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const HTTPError_1 = require("./HTTPError");
 const map_1 = require("fpts/map");
-function random_id() {
-    return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-}
+const maths_1 = require("fpts/maths");
+const function_1 = require("fpts/function");
+const option_1 = require("fpts/option");
+const combinator_1 = require("fpts/combinator");
+const random_id = () => (0, maths_1.randint)(0, Number.MAX_SAFE_INTEGER);
 function rpc_factory_factory(endpoint, id_provider = random_id) {
     function parse_response(x) {
         if ('result' in x) {
@@ -40,17 +42,11 @@ function rpc_factory_factory(endpoint, id_provider = random_id) {
         })
             .then(response => response.json())
             .then(response => {
+            const help = (x) => (0, function_1.pipe)(resolutions, (0, map_1.pop)(x.id), (0, option_1.map)((0, combinator_1.T)(parse_response(x))));
             if (Array.isArray(response))
-                for (const x of response) {
-                    const f = (0, map_1.pop)(x.id)(resolutions);
-                    if (f)
-                        f(parse_response(x));
-                }
-            else {
-                const f = (0, map_1.pop)(response.id)(resolutions);
-                if (f)
-                    f(parse_response(response));
-            }
+                response.forEach(help);
+            else
+                help(response);
             for (const f of resolutions.values())
                 f(new HTTPError_1.default(500, 'did not receive response for some reason'));
         });

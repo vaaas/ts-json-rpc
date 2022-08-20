@@ -10,6 +10,10 @@ import type {
 import HTTPError from './HTTPError';
 import type { Unary, ArrayOrItem, Nullary } from 'fpts/data';
 import { pop } from 'fpts/map';
+import { randint } from 'fpts/maths';
+import { pipe } from 'fpts/function';
+import { map } from 'fpts/option';
+import { T } from 'fpts/combinator';
 
 type RequestRes<
     P extends Procedures,
@@ -17,9 +21,7 @@ type RequestRes<
     M extends Method<P>
 > = [ RPCRequest<P, I, M>, Unary<Result<P, M>, void> ]
 
-function random_id(): number {
-    return Math.floor(Math.random()*Number.MAX_SAFE_INTEGER);
-}
+const random_id = () => randint(0, Number.MAX_SAFE_INTEGER);
 
 export default function rpc_factory_factory<P extends Procedures>(
     endpoint: string,
@@ -59,15 +61,10 @@ export default function rpc_factory_factory<P extends Procedures>(
             })
             .then(response => response.json() as Promise<ArrayOrItem<RPCResponse<P, ID, Method<P>>>>)
             .then(response => {
-                if (Array.isArray(response))
-                    for (const x of response) {
-                        const f = pop(x.id)(resolutions);
-                        if (f) f(parse_response(x));
-                    }
-                else {
-                    const f = pop(response.id)(resolutions);
-                    if (f) f(parse_response(response));
-                }
+                const help = (x: RPCResponse<P, ID, keyof P>) =>
+                    pipe(resolutions, pop(x.id), map(T(parse_response(x))));
+                if (Array.isArray(response)) response.forEach(help);
+                else help(response);
                 for (const f of resolutions.values())
                     f(new HTTPError(500, 'did not receive response for some reason'));
             });
