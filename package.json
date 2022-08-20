@@ -1,0 +1,14 @@
+{
+    "name": "ts-json-rpc",
+    "version": "1.0.0",
+    "scripts": {
+        "build": "tsc"
+    },
+    "devDependencies": {
+        "@types/node": "^18.7.8"
+    },
+    "dependencies": {
+        "fpts": "github:vaaas/fpts",
+        "ts-validate": "github:vaaas/ts-validate"
+    }
+}
