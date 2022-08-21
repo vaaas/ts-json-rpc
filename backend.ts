@@ -5,7 +5,6 @@ import { Natural, Union, List, validate } from 'ts-validate';
 import { Tail, Intersect, ArrayOrItem } from 'fpts/data';
 import HTTPError from './HTTPError';
 
-
 /** a procedure object */
 export type Procedure = {
     procedure: (env: any, ...xs: any[]) => Promise<any | HTTPError<any>>;

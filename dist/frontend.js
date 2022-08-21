@@ -7,7 +7,7 @@ const function_1 = require("fpts/function");
 const option_1 = require("fpts/option");
 const combinator_1 = require("fpts/combinator");
 const random_id = () => (0, maths_1.randint)(0, Number.MAX_SAFE_INTEGER);
-function rpc_factory_factory(endpoint, id_provider = random_id) {
+function rpc_factory_factory(endpoint, id_provider = random_id, next_tick = requestAnimationFrame) {
     function parse_response(x) {
         if ('result' in x) {
             return x.result;
@@ -66,7 +66,7 @@ function rpc_factory_factory(endpoint, id_provider = random_id) {
                 queue.push(r);
                 if (!timeout) {
                     timeout = true;
-                    requestAnimationFrame(() => commit_requests(endpoint));
+                    next_tick(() => commit_requests(endpoint));
                 }
             });
         };

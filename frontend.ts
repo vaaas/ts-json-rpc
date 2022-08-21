@@ -25,7 +25,8 @@ const random_id = () => randint(0, Number.MAX_SAFE_INTEGER);
 
 export default function rpc_factory_factory<P extends Procedures>(
     endpoint: string,
-    id_provider: Nullary<ID> = random_id
+    id_provider: Nullary<ID> = random_id,
+    next_tick = requestAnimationFrame,
 ) {
     function parse_response<I extends ID, M extends Method<P>>(x: RPCResponse<P, I, M>): Result<P, M> {
         if ('result' in x) {
@@ -85,7 +86,7 @@ export default function rpc_factory_factory<P extends Procedures>(
                 queue.push(r);
                 if (!timeout) {
                     timeout = true;
-                    requestAnimationFrame(() => commit_requests(endpoint));
+                    next_tick(() => commit_requests(endpoint));
                 }
             });
         };
