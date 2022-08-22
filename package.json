@@ -2,7 +2,8 @@
     "name": "ts-json-rpc",
     "version": "1.0.0",
     "scripts": {
-        "build": "tsc"
+        "build": "tsc",
+        "test": "node --test"
     },
     "devDependencies": {
         "@types/node": "^18.7.8"

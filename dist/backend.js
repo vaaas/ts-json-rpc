@@ -1,16 +1,19 @@
 "use strict";
 // https://www.jsonrpc.org/specification
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.initialise = exports.call_method = exports.serve = exports.toRPCResponse = exports.json = exports.text = void 0;
 const ts_validate_1 = require("ts-validate");
 const HTTPError_1 = require("./HTTPError");
 function text(socket, code, data) {
     socket.writeHead(code, { 'Content-Type': 'text/plain' });
     socket.end(data);
 }
+exports.text = text;
 function json(socket, data, code = 200) {
     socket.writeHead(code, { 'Content-Type': 'application/json' });
     socket.end(JSON.stringify(data));
 }
+exports.json = json;
 /**
  * Generates a json-rpc response from a procedure response.
  * Note that errors have a different schema!
@@ -29,6 +32,7 @@ function toRPCResponse(id, response) {
         result: response,
     };
 }
+exports.toRPCResponse = toRPCResponse;
 /** Serves a json-rpc response through http */
 function serve(socket, response) {
     if (Array.isArray(response))
@@ -38,12 +42,17 @@ function serve(socket, response) {
     else
         json(socket, response);
 }
-function call_method(procedures, env, method, params) {
-    return procedures[method].procedure(env, ...params).catch(e => {
+exports.serve = serve;
+async function call_method(procedures, env, method, params) {
+    try {
+        return await procedures[method].procedure(env, ...params);
+    }
+    catch (e) {
         console.log(e);
         return new HTTPError_1.default(500, 'Internal server error');
-    });
+    }
 }
+exports.call_method = call_method;
 function initialise(procedures, env_provider, body_provider) {
     const request_validator = (0, ts_validate_1.validate)((0, ts_validate_1.Union)(validate_one, (0, ts_validate_1.List)(validate_one)));
     function validate_one(x) {
@@ -72,4 +81,4 @@ function initialise(procedures, env_provider, body_provider) {
         serve(socket, res);
     };
 }
-exports.default = initialise;
+exports.initialise = initialise;

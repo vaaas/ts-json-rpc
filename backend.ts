@@ -93,12 +93,12 @@ export type RPCResponse<
     | RPCFailure<P, I, M>
 
 
-function text(socket: ServerResponse, code: number, data: string): void {
+export function text(socket: ServerResponse, code: number, data: string): void {
     socket.writeHead(code, { 'Content-Type': 'text/plain' });
     socket.end(data);
 }
 
-function json(socket: ServerResponse, data: any, code: number = 200): void {
+export function json(socket: ServerResponse, data: any, code: number = 200): void {
     socket.writeHead(code, { 'Content-Type': 'application/json' });
     socket.end(JSON.stringify(data));
 }
@@ -107,7 +107,7 @@ function json(socket: ServerResponse, data: any, code: number = 200): void {
  * Generates a json-rpc response from a procedure response.
  * Note that errors have a different schema!
  */
-function toRPCResponse<
+export function toRPCResponse<
     P extends Procedures,
     M extends Method<P>
 >(
@@ -129,7 +129,7 @@ function toRPCResponse<
 }
 
 /** Serves a json-rpc response through http */
-function serve<P extends Procedures, I extends ID, M extends Method<P>>(
+export function serve<P extends Procedures, I extends ID, M extends Method<P>>(
     socket: ServerResponse,
     response: ArrayOrItem<RPCResponse<P, I, M>>,
 ): void {
@@ -141,22 +141,21 @@ function serve<P extends Procedures, I extends ID, M extends Method<P>>(
         json(socket, response);
 }
 
-function call_method<P extends Procedures, I extends ID, M extends Method<P>>(
+export async function call_method<P extends Procedures, I extends ID, M extends Method<P>>(
     procedures: P,
     env: Env<P>,
     method: M,
     params: Params<P, M>,
 ): Promise<Result<P, M>> {
-    return procedures[method]!.procedure(
-        env,
-        ...params,
-    ).catch(e => {
+    try {
+        return await procedures[method]!.procedure(env, ...params)
+    } catch(e) {
         console.log(e);
         return new HTTPError(500, 'Internal server error');
-    });
+    }
 }
 
-export default function initialise<P extends Procedures>(
+export function initialise<P extends Procedures>(
     procedures: P,
     env_provider: (req: IncomingMessage, res: ServerResponse) => Env<P>,
     body_provider: (req: IncomingMessage) => number | Promise<number>,
