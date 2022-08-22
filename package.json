@@ -14,6 +14,7 @@
     },
     "exports": {
         "./frontend": "./dist/frontend.js",
-        "./backend": "./dist/backend.js"
+        "./backend": "./dist/backend.js",
+        "./HTTPError": "./dist/HTTPError.js"
     }
 }
