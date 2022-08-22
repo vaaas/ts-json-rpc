@@ -11,5 +11,9 @@
     "dependencies": {
         "fpts": "github:vaaas/fpts",
         "ts-validate": "github:vaaas/ts-validate"
+    },
+    "exports": {
+        "./frontend": "./dist/frontend.js",
+        "./backend": "./dist/backend.js"
     }
 }
