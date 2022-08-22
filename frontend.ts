@@ -23,10 +23,11 @@ type RequestRes<
 
 const random_id = () => randint(0, Number.MAX_SAFE_INTEGER);
 
-export default function rpc_factory_factory<P extends Procedures>(
+export function initialise<P extends Procedures>(
     endpoint: string,
     id_provider: Nullary<ID> = random_id,
     next_tick = requestAnimationFrame,
+    http = fetch,
 ) {
     function parse_response<I extends ID, M extends Method<P>>(x: RPCResponse<P, I, M>): Result<P, M> {
         if ('result' in x) {
@@ -52,7 +53,7 @@ export default function rpc_factory_factory<P extends Procedures>(
         }
         timeout = false;
 
-        return fetch(endpoint,
+        return http(endpoint,
             {
                 method: 'POST',
                 headers: {

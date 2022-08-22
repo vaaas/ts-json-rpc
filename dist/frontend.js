@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.initialise = void 0;
 const HTTPError_1 = require("./HTTPError");
 const map_1 = require("fpts/map");
 const maths_1 = require("fpts/maths");
@@ -7,7 +8,7 @@ const function_1 = require("fpts/function");
 const option_1 = require("fpts/option");
 const combinator_1 = require("fpts/combinator");
 const random_id = () => (0, maths_1.randint)(0, Number.MAX_SAFE_INTEGER);
-function rpc_factory_factory(endpoint, id_provider = random_id, next_tick = requestAnimationFrame) {
+function initialise(endpoint, id_provider = random_id, next_tick = requestAnimationFrame, http = fetch) {
     function parse_response(x) {
         if ('result' in x) {
             return x.result;
@@ -33,7 +34,7 @@ function rpc_factory_factory(endpoint, id_provider = random_id, next_tick = requ
             resolutions.set(x[0].id, x[1]);
         }
         timeout = false;
-        return fetch(endpoint, {
+        return http(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -72,4 +73,4 @@ function rpc_factory_factory(endpoint, id_provider = random_id, next_tick = requ
         };
     };
 }
-exports.default = rpc_factory_factory;
+exports.initialise = initialise;
