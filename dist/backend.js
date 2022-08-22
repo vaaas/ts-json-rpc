@@ -48,7 +48,7 @@ async function call_method(procedures, env, method, params) {
         return await procedures[method].procedure(env, ...params);
     }
     catch (e) {
-        console.log(e);
+        console.error(e);
         return new HTTPError_1.default(500, 'Internal server error');
     }
 }

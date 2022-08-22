@@ -4,8 +4,6 @@ import * as assert from 'node:assert'
 import { initialise } from './dist/backend.js'
 import { last } from 'fpts/array'
 
-console.log(initialise)
-
 const procedures = {
     ping: {
         procedure: spy((env) => Promise.resolve('pong')),

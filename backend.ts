@@ -150,7 +150,7 @@ export async function call_method<P extends Procedures, I extends ID, M extends 
     try {
         return await procedures[method]!.procedure(env, ...params)
     } catch(e) {
-        console.log(e);
+        console.error(e);
         return new HTTPError(500, 'Internal server error');
     }
 }
