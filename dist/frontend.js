@@ -50,6 +50,12 @@ function initialise(endpoint, id_provider = random_id, next_tick = requestAnimat
                 help(response);
             for (const f of resolutions.values())
                 f(new HTTPError_1.default(500, 'did not receive response for some reason'));
+        })
+            .catch(e => {
+            const err = new HTTPError_1.default(500, e.message);
+            err.cause = e;
+            for (const f of resolutions.values())
+                f(err);
         });
     }
     return function rpc_factory(method) {

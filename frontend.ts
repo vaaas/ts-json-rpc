@@ -69,6 +69,12 @@ export function initialise<P extends Procedures>(
                 else help(response);
                 for (const f of resolutions.values())
                     f(new HTTPError(500, 'did not receive response for some reason'));
+            })
+            .catch(e => {
+                const err = new HTTPError(500, e.message);
+                err.cause = e;
+                for (const f of resolutions.values())
+                    f(err);
             });
     }
 
