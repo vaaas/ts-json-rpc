@@ -61,8 +61,8 @@ export function initialise<P extends Procedures>(
                 },
                 body: JSON.stringify(request.length === 1 ? request[0] : request),
             })
-            .then(response => response.json() as Promise<ArrayOrItem<RPCResponse<P, ID, Method<P>>>>)
-            .then(response => {
+            .then(response => response.json())
+            .then((response: ArrayOrItem<RPCResponse<P, ID, Method<P>>>) => {
                 const help = (x: RPCResponse<P, ID, keyof P>) =>
                     pipe(resolutions, pop(x.id), map(T(parse_response(x))));
                 if (Array.isArray(response)) response.forEach(help);

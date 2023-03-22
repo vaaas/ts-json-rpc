@@ -1,18 +1,18 @@
 // https://www.jsonrpc.org/specification
 
 import type { IncomingMessage, ServerResponse } from 'http';
-import { Natural, Union, List, validate } from 'ts-validate';
+import { Natural, Union, List, validate, isObject } from 'ts-validate';
 import { Tail, Intersect, ArrayOrItem } from 'fpts/data';
 import HTTPError from './HTTPError';
 
 /** a procedure object */
-export type Procedure = {
-    procedure: (env: any, ...xs: any[]) => Promise<any | HTTPError<any>>;
-    validator: (x: any) => boolean;
+export type Procedure<T extends any[]> = {
+    procedure: (env: any, ...xs: T) => Promise<any | HTTPError<any>>;
+    validator: (x: unknown) => x is T;
 }
 
 /** collection of all procedures */
-export type Procedures = Record<string, Procedure>;
+export type Procedures = Record<string, Procedure<any>>;
 
 /** any one of the methods available through json-rpc */
 export type Method<T extends Procedures> = keyof T;
@@ -159,22 +159,19 @@ export function initialise<P extends Procedures>(
     procedures: P,
     env_provider: (req: IncomingMessage, res: ServerResponse) => Env<P>,
     body_provider: (req: IncomingMessage) => number | Promise<number>,
-): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
-    const request_validator = validate<ArrayOrItem<RPCRequest<P, ID, Method<P>>>>(Union(
+) {
+    const request_validator = validate(Union(
         validate_one,
         List(validate_one),
     ));
 
-    function validate_one(x: any): boolean {
-        return Boolean(
-            typeof x === 'object'
-            && x !== null
+    function validate_one(x: unknown): x is RPCRequest<P, ID, Method<P>> {
+        return isObject(x)
             && x.jsonrpc === '2.0'
             && Natural(x.id)
-            && x.method in procedures
+            && (x.method as string) in procedures
             && Array.isArray(x.params)
-            && procedures[x.method]!.validator(x.params)
-        );
+            && procedures[(x.method as keyof P)]!.validator(x.params)
     }
 
     return async function(http_request: IncomingMessage, socket: ServerResponse): Promise<void> {
@@ -187,7 +184,7 @@ export function initialise<P extends Procedures>(
         if (req instanceof Error)
             return text(socket, 400, 'Bad request');
         const env = env_provider(http_request, socket);
-        const res: ArrayOrItem<RPCResponse<P, ID, Method<P>>> =
+        const res =
             Array.isArray(req)
                 ? await Promise.all(req.map(
                     req => call_method(procedures, env, req.method, req.params)

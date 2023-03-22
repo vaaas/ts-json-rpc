@@ -56,13 +56,12 @@ exports.call_method = call_method;
 function initialise(procedures, env_provider, body_provider) {
     const request_validator = (0, ts_validate_1.validate)((0, ts_validate_1.Union)(validate_one, (0, ts_validate_1.List)(validate_one)));
     function validate_one(x) {
-        return Boolean(typeof x === 'object'
-            && x !== null
+        return (0, ts_validate_1.isObject)(x)
             && x.jsonrpc === '2.0'
             && (0, ts_validate_1.Natural)(x.id)
             && x.method in procedures
             && Array.isArray(x.params)
-            && procedures[x.method].validator(x.params));
+            && procedures[x.method].validator(x.params);
     }
     return async function (http_request, socket) {
         if (http_request.method !== 'POST')

@@ -42,7 +42,7 @@ function initialise(endpoint, id_provider = random_id, next_tick = requestAnimat
             body: JSON.stringify(request.length === 1 ? request[0] : request),
         })
             .then(response => response.json())
-            .then(response => {
+            .then((response) => {
             const help = (x) => (0, function_1.pipe)(resolutions, (0, map_1.pop)(x.id), (0, option_1.map)((0, combinator_1.T)(parse_response(x))));
             if (Array.isArray(response))
                 response.forEach(help);
