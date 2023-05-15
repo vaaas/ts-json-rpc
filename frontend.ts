@@ -27,7 +27,7 @@ export function initialise<P extends Procedures>(
     endpoint: string,
     id_provider: Nullary<ID> = random_id,
     next_tick = requestAnimationFrame,
-    http = fetch,
+    http: Unary<RequestInfo, Promise<Response>> = fetch,
 ) {
     function parse_response<I extends ID, M extends Method<P>>(x: RPCResponse<P, I, M>): Result<P, M> {
         if ('result' in x) {
@@ -53,14 +53,14 @@ export function initialise<P extends Procedures>(
         }
         timeout = false;
 
-        return http(endpoint,
+        return http(new Request(endpoint,
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(request.length === 1 ? request[0] : request),
-            })
+            }))
             .then(response => response.json())
             .then((response: ArrayOrItem<RPCResponse<P, ID, Method<P>>>) => {
                 const help = (x: RPCResponse<P, ID, keyof P>) =>

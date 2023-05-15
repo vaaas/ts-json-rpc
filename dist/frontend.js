@@ -34,13 +34,13 @@ function initialise(endpoint, id_provider = random_id, next_tick = requestAnimat
             resolutions.set(x[0].id, x[1]);
         }
         timeout = false;
-        return http(endpoint, {
+        return http(new Request(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(request.length === 1 ? request[0] : request),
-        })
+        }))
             .then(response => response.json())
             .then((response) => {
             const help = (x) => (0, function_1.pipe)(resolutions, (0, map_1.pop)(x.id), (0, option_1.map)((0, combinator_1.T)(parse_response(x))));
