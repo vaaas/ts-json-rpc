@@ -27,7 +27,7 @@ export function initialise<P extends Procedures>(
     endpoint: string,
     id_provider: Nullary<ID> = random_id,
     next_tick = requestAnimationFrame,
-    http: Unary<RequestInfo, Promise<Response>> = fetch,
+    http: Unary<Request, Promise<Response>> = fetch,
 ) {
     function parse_response<I extends ID, M extends Method<P>>(x: RPCResponse<P, I, M>): Result<P, M> {
         if ('result' in x) {
