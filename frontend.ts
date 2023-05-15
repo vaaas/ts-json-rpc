@@ -21,7 +21,7 @@ type RequestRes<
     M extends Method<P>
 > = [ RPCRequest<P, I, M>, Unary<Result<P, M>, void> ]
 
-const random_id = () => randint(0, Number.MAX_SAFE_INTEGER);
+export const random_id = () => randint(0, Number.MAX_SAFE_INTEGER);
 
 export function initialise<P extends Procedures>(
     endpoint: string,
