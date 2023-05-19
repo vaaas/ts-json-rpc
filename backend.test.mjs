@@ -269,7 +269,7 @@ describe('backend', () => {
         )
     })
 
-    it('should elevate all uncaught errors to httperror 500', async () => {
+    it('should elevate all uncaught errors to error with code 500', async () => {
         res.writeHead.calls.length = 0
         res.end.calls.length = 0
         procedures.fail.procedure.calls.length = 0
@@ -302,10 +302,7 @@ describe('backend', () => {
                 JSON.stringify( {
                     jsonrpc: '2.0',
                     id: 1,
-                    error: {
-                        code: 500,
-                        message: 'Internal server error'
-                    }
+                    error: { code: 500 }
                 })
             ]
         )
@@ -367,41 +364,10 @@ describe('backend', () => {
                     {
                         jsonrpc: '2.0',
                         id: 3,
-                        error: {
-                            code: 500,
-                            message: 'Internal server error'
-                        }
+                        error: { code: 500 }
                     }
                 ])
             ]
         )
     })
 })
-
-// describe('routes/rpc.js', () => {
-
-//     it('should turn all uncaught errors into http 500 errors', async () => {
-//         jest.mock('../procedures/getUser', () => ({
-//             procedure: async () => { throw new Error('test') },
-//             validator: () => true,
-//         }));
-
-//         const req = {
-//             method: 'POST',
-//             body: {
-//                 jsonrpc: '2.0',
-//                 id: 123,
-//                 method: 'ping',
-//                 params: [],
-//             },
-//         };
-
-//         await init({})(req, res);
-//         expect(res.status).toHaveBeenCalledWith(500);
-//         expect(res.json).toHaveBeenCalledWith({
-//             jsonrpc: '2.0',
-//             id: 123,
-//             error: new HTTPError(500, 'Internal server error'),
-//         });
-//     });
-// })

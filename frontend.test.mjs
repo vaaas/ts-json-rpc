@@ -1,11 +1,12 @@
 import { describe, it } from 'node:test'
 import { spy } from 'fpts/function'
 import { initialise } from './dist/frontend.js'
-import HTTPModule from './dist/HTTPError.js'
 import * as assert from 'node:assert'
 import { last } from 'fpts/array'
+import HTTPModule from './dist/HTTPError.js';
+const HTTPError = HTTPModule.default;
 
-const HTTPError = HTTPModule.default
+const hostname = 'https://localhost/api/rpc';
 
 const next_frame = f => setTimeout(() => f(), 1)
 
@@ -13,7 +14,14 @@ const request_maker = x => spy(async () => ({
     json: () => x
 }))
 
-describe('frontend', () => {
+const same_request = async (a, b) => {
+    assert.equal(a instanceof Request, true);
+    assert.equal(b instanceof Request, true);
+    assert.deepEqual(Array.from(a.headers), Array.from(b.headers));
+    assert.equal(await a.text(), await b.text());
+}
+
+describe('frontend', async () => {
     it('make http requests and return their results', async () => {
         const http = request_maker({
             jsonrpc: '2.0',
@@ -21,27 +29,21 @@ describe('frontend', () => {
             result: 'pong'
         })
 
-        const result = await initialise('/api/rpc', () => 1, next_frame, http)('ping')()
+        const result = await initialise(hostname, () => 1, next_frame, http)('ping')()
 
         assert.equal(http.calls.length, 1)
-        assert.deepEqual(
-            last(http.calls),
-            [
-                '/api/rpc',
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        jsonrpc: '2.0',
-                        id: 1,
-                        method: 'ping',
-                        params: [],
-                    })
-                }
-            ]
-        );
+        await same_request(last(http.calls)[0], new Request(hostname, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'ping',
+                params: [],
+            })
+        }));
         assert.equal(result, 'pong')
     })
 
@@ -60,22 +62,20 @@ describe('frontend', () => {
         ])
 
         let i = 1
-        const helper = initialise('/api/rpc', () => i++, next_frame, http)
+        const helper = initialise(hostname, () => i++, next_frame, http)
         const ping = helper('ping')
         const wrong = helper('wrong')
 
         const results = await Promise.all([ping(), wrong(false, false, false)])
 
         assert.equal(http.calls.length, 1)
-        assert.deepEqual(
-            last(http.calls),
-            [
-                '/api/rpc',
+        await same_request(
+            last(http.calls)[0],
+            new Request(
+                hostname,
                 {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify([
                         {
                             jsonrpc: '2.0',
@@ -91,8 +91,8 @@ describe('frontend', () => {
                         },
                     ])
                 }
-            ]
-        );
+            )
+        )
 
         assert.deepEqual(
             results,
@@ -103,7 +103,7 @@ describe('frontend', () => {
         )
     })
 
-    it('should return errors as HTTPErrors', async () => {
+    it('should return errors as ErrorsWithCode', async () => {
         const http = request_maker({
             jsonrpc: '2.0',
             id: 1,
@@ -113,8 +113,8 @@ describe('frontend', () => {
             }
         })
 
-        const result = await initialise('/api/rpc', () => 1, next_frame, http)('ping')()
-        assert.equal(result instanceof HTTPError, true)
+        const result = await initialise(hostname, () => 1, next_frame, http)('ping')()
+        assert.equal(result instanceof Error, true)
         assert.equal(result.code, 404)
         assert.equal(result.message, 'Not found')
     })
@@ -129,7 +129,7 @@ describe('frontend', () => {
         ])
 
         let i = 1
-        const helper = await initialise('/api/rpc', () => i++, next_frame, http)
+        const helper = await initialise(hostname, () => i++, next_frame, http)
         const ping = helper('ping')
         const pong = helper('pong')
         const result = await Promise.all([ping(), pong(1,2,3)])
