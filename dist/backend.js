@@ -3,7 +3,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initialise = exports.call_method = exports.serve = exports.toRPCResponse = exports.json = exports.text = void 0;
 const ts_validate_1 = require("ts-validate");
-const HTTPError_1 = require("./HTTPError");
 function text(socket, code, data) {
     socket.writeHead(code, { 'Content-Type': 'text/plain' });
     socket.end(data);
@@ -19,7 +18,8 @@ exports.json = json;
  * Note that errors have a different schema!
  */
 function toRPCResponse(id, response) {
-    if (response instanceof HTTPError_1.default) {
+    if (response instanceof Error) {
+        response.code ??= 500;
         return {
             jsonrpc: '2.0',
             id,
@@ -49,7 +49,7 @@ async function call_method(procedures, env, method, params) {
     }
     catch (e) {
         console.error(e);
-        return new HTTPError_1.default(500, 'Internal server error');
+        return new Error('Internal server error', { cause: e });
     }
 }
 exports.call_method = call_method;

@@ -3,11 +3,13 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { Natural, Union, List, validate, isObject } from 'ts-validate';
 import { Tail, Intersect, ArrayOrItem } from 'fpts/data';
-import HTTPError from './HTTPError';
+import { ErrorStatus } from './HTTPError';
+
+type ErrorWithCode = Error & { code: ErrorStatus }
 
 /** a procedure object */
 export type Procedure<T extends any[]> = {
-    procedure: (env: any, ...xs: T) => Promise<any | HTTPError<any>>;
+    procedure: (env: any, ...xs: T) => Promise<any | Error>;
     validator: (x: unknown) => x is T;
 }
 
@@ -28,19 +30,13 @@ export type Result<
     P extends Procedures,
     M extends Method<P>
 > = Awaited<ReturnType<P[M]['procedure']>>
-    | HTTPError<500>;
+    | Error;
 
 /** only the successful response of a procedure (not the error) */
 export type GoodResult<
     P extends Procedures,
     M extends Method<P>
 > = Exclude<Result<P, M>, Error>;
-
-/** only the unsuccessful response of an object (the error) */
-export type BadResult<
-    P extends Procedures,
-    M extends Method<P>
-> = Extract<Result<P, M>, Error>;
 
 /** acceptable JSON RPC ID */
 export type ID = string|number;
@@ -70,14 +66,10 @@ export type RPCSuccess<
     readonly result: GoodResult<P, M>;
 }
 
-export type RPCFailure<
-    P extends Procedures,
-    I extends ID,
-    M extends Method<P>
-> = {
+export type RPCFailure<I extends ID> = {
     readonly jsonrpc: '2.0';
     readonly id: I;
-    readonly error: BadResult<P, M>;
+    readonly error: ErrorWithCode;
 }
 
 /** A json-rpc response.
@@ -90,8 +82,7 @@ export type RPCResponse<
     I extends ID,
     M extends Method<P>
 > = RPCSuccess<P, I, M>
-    | RPCFailure<P, I, M>
-
+    | RPCFailure<I>
 
 export function text(socket: ServerResponse, code: number, data: string): void {
     socket.writeHead(code, { 'Content-Type': 'text/plain' });
@@ -114,11 +105,12 @@ export function toRPCResponse<
     id: ID,
     response: Result<P, M>,
 ): RPCResponse<P, ID, M> {
-    if (response instanceof HTTPError) {
+    if (response instanceof Error) {
+        (response as ErrorWithCode).code ??= 500;
         return {
             jsonrpc: '2.0',
             id,
-            error: response as BadResult<P, M>,
+            error: response as ErrorWithCode,
         };
     }
     return {
@@ -136,12 +128,12 @@ export function serve<P extends Procedures, I extends ID, M extends Method<P>>(
     if (Array.isArray(response))
         json(socket, response);
     else if ('error' in response)
-        json(socket, response, (response.error as HTTPError<any>).code);
+        json(socket, response, response.error.code);
     else
         json(socket, response);
 }
 
-export async function call_method<P extends Procedures, I extends ID, M extends Method<P>>(
+export async function call_method<P extends Procedures, M extends Method<P>>(
     procedures: P,
     env: Env<P>,
     method: M,
@@ -151,7 +143,7 @@ export async function call_method<P extends Procedures, I extends ID, M extends 
         return await procedures[method]!.procedure(env, ...params)
     } catch(e) {
         console.error(e);
-        return new HTTPError(500, 'Internal server error');
+        return new Error('Internal server error', { cause: e });
     }
 }
 

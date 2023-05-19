@@ -33,8 +33,7 @@ export function initialise<P extends Procedures>(
         if ('result' in x) {
             return x.result;
         } else if ('error' in x) {
-            const y: HTTPError<any> = x.error
-            return new HTTPError(y.code, y.message);
+            return new HTTPError(x.error.code, x.error.message);
         } else {
             return new HTTPError(500, 'Unexpected return value ' + JSON.stringify(x));
         }
@@ -61,8 +60,8 @@ export function initialise<P extends Procedures>(
                 },
                 body: JSON.stringify(request.length === 1 ? request[0] : request),
             }))
-            .then(response => response.json())
-            .then((response: ArrayOrItem<RPCResponse<P, ID, Method<P>>>) => {
+            .then(response => response.json() as Promise<ArrayOrItem<RPCResponse<P, ID, Method<P>>>>)
+            .then(response => {
                 const help = (x: RPCResponse<P, ID, keyof P>) =>
                     pipe(resolutions, pop(x.id), map(T(parse_response(x))));
                 if (Array.isArray(response)) response.forEach(help);

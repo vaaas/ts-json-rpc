@@ -15,8 +15,7 @@ function initialise(endpoint, id_provider = exports.random_id, next_tick = reque
             return x.result;
         }
         else if ('error' in x) {
-            const y = x.error;
-            return new HTTPError_1.default(y.code, y.message);
+            return new HTTPError_1.default(x.error.code, x.error.message);
         }
         else {
             return new HTTPError_1.default(500, 'Unexpected return value ' + JSON.stringify(x));
@@ -43,7 +42,7 @@ function initialise(endpoint, id_provider = exports.random_id, next_tick = reque
             body: JSON.stringify(request.length === 1 ? request[0] : request),
         }))
             .then(response => response.json())
-            .then((response) => {
+            .then(response => {
             const help = (x) => (0, function_1.pipe)(resolutions, (0, map_1.pop)(x.id), (0, option_1.map)((0, combinator_1.T)(parse_response(x))));
             if (Array.isArray(response))
                 response.forEach(help);
