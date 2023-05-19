@@ -19,11 +19,14 @@ exports.json = json;
  */
 function toRPCResponse(id, response) {
     if (response instanceof Error) {
-        response.code ??= 500;
         return {
             jsonrpc: '2.0',
             id,
-            error: response,
+            error: {
+                message: response.message,
+                // @ts-ignore
+                code: response.code ?? 500,
+            },
         };
     }
     return {

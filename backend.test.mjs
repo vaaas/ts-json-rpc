@@ -302,7 +302,10 @@ describe('backend', () => {
                 JSON.stringify( {
                     jsonrpc: '2.0',
                     id: 1,
-                    error: { code: 500 }
+                    error: {
+                        message: 'Internal server error',
+                        code: 500,
+                    }
                 })
             ]
         )
@@ -364,7 +367,10 @@ describe('backend', () => {
                     {
                         jsonrpc: '2.0',
                         id: 3,
-                        error: { code: 500 }
+                        error: {
+                            message: 'Internal server error',
+                            code: 500,
+                        }
                     }
                 ])
             ]

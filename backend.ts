@@ -5,7 +5,10 @@ import { Natural, Union, List, validate, isObject } from 'ts-validate';
 import { Tail, Intersect, ArrayOrItem } from 'fpts/data';
 import { ErrorStatus } from './HTTPError';
 
-type ErrorWithCode = Error & { code: ErrorStatus }
+type ErrorWithCode = {
+    message: string;
+    code: ErrorStatus;
+}
 
 /** a procedure object */
 export type Procedure<T extends any[]> = {
@@ -106,11 +109,14 @@ export function toRPCResponse<
     response: Result<P, M>,
 ): RPCResponse<P, ID, M> {
     if (response instanceof Error) {
-        (response as ErrorWithCode).code ??= 500;
         return {
             jsonrpc: '2.0',
             id,
-            error: response as ErrorWithCode,
+            error: {
+                message: response.message,
+                // @ts-ignore
+                code: response.code ?? 500,
+            },
         };
     }
     return {
