@@ -1,6 +1,6 @@
 export type ErrorStatus = 400 | 401 | 404 | 500;
 
-export default class HTTPError<T extends ErrorStatus> extends Error {
+export class HTTPError<T extends ErrorStatus> extends Error {
     code: T;
 
     constructor(code: T, message: string) {
@@ -15,3 +15,5 @@ export default class HTTPError<T extends ErrorStatus> extends Error {
         };
     }
 }
+
+export default HTTPError;
