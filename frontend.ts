@@ -23,6 +23,8 @@ type RequestRes<
 
 export const random_id = () => randint(0, Number.MAX_SAFE_INTEGER);
 
+const MAX_PENDING_REQUESTS = 8;
+
 export function initialise<P extends Procedures>(
     endpoint: string,
     id_provider: Nullary<ID> = random_id,
@@ -44,7 +46,7 @@ export function initialise<P extends Procedures>(
     function commit_requests(endpoint: string) {
         const request: RPCRequest<P, ID, Method<P>>[] = [];
         const resolutions: Map<ID, Unary<Result<P, Method<P>>, void>> = new Map();
-        while (queue.length) {
+        while (queue.length && resolutions.size <= MAX_PENDING_REQUESTS) {
             const x = queue.pop();
             if (!x) continue;
             request.push(x[0]);
@@ -74,6 +76,10 @@ export function initialise<P extends Procedures>(
                 err.cause = e;
                 for (const f of resolutions.values())
                     f(err);
+            })
+            .finally(() => {
+                if (queue.length)
+                    commit_requests(endpoint);
             });
     }
 
